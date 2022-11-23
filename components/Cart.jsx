@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React, { useState, useRef } from 'react'
 import Link from 'next/link'
 import { AiOutlineMinus, AiOutlinePlus, AiOutlineLeft, AiOutlineShopping } from 'react-icons/ai';
 import { TiDeleteOutline } from 'react-icons/ti';
@@ -7,32 +7,40 @@ import toast from 'react-hot-toast';
 import { useStateContext } from '../context/StateContext';
 import { urlFor } from '../lib/client'
 import getStripe from '../lib/getStripe'
+import { Loader } from '../components'
 
 
 const Cart = () => {
   const cartRef = useRef();
+  const [loading, setLoading] = useState(false)
 
   const { totalPrice, totalQuantities, carItems, setShowCart, toggleCartItemQuantity, onRemove } = useStateContext();
 
   const handleCheckout = async () => {
-    const stripe = await getStripe();
+    if (!loading) {
+      const stripe = await getStripe();
+      setLoading(true);
 
 
-    const response = await fetch('/api/stripe', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(carItems)
-    });
+      const response = await fetch('/api/stripe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(carItems)
+      });
 
-    if (response.statusCode === 500) return;
+      if (response.statusCode === 500) return;
 
-    const data = await response.json();
+      const data = await response.json();
 
-    toast.loading('Redirecting...');
+      toast.loading('Redirecting...');
 
-    stripe.redirectToCheckout({ sessionId: data.id });
+      stripe.redirectToCheckout({ sessionId: data.id });
+      setLoading(false)
+    } else {
+      toast.error('Wait please...');
+    }
   }
 
   return (
@@ -94,7 +102,7 @@ const Cart = () => {
             </div>
             <div className="btn-container">
               <button type='button' className='btn' onClick={handleCheckout}>
-                Pay with Stripe
+                {!loading ? 'Pay with Stripe' : <Loader />}
               </button>
             </div>
           </div>
